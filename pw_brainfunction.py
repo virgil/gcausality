@@ -1,5 +1,6 @@
 #!/usr/bin/python
-from numpy import array, matrix, exp, pi, sqrt, mean, round, random
+from numpy import array, matrix, exp, pi, sqrt, mean, round, random, ones
+import numpy
 #from pprint import pprint
 #from copy import copy
 #import numpy
@@ -37,10 +38,9 @@ class pw_brainfunction:
 
 		self.critter_fitness = float(lines.pop().split('=')[-1].strip())
 	
-	
+		self.num_inputneurons = int(self.header[3])
 		self.critter_index = int(self.header[1])
 		self.num_neurons = int(self.header[2])
-		self.num_inputneurons = int(self.header[3])
 		self.num_synapes = int(self.header[4])
 		self.timestep_born = int(self.header[5])
 
@@ -75,7 +75,8 @@ class pw_brainfunction:
 	
 		# sanity check the activations == they're all within [0,1] ?
 		assert 0.0 <= self.acts.all() <= 1.0, "acts had values not within [0.0,1.0]"
-	
+
+		
 		##############################################
 		# define the neural groups
 		##############################################
@@ -92,6 +93,21 @@ class pw_brainfunction:
 		self.neurons['behavior'] = BEHAVIOR_NEURONS
 		self.neurons['processing'] = PROCESSING_NEURONS
 		self.neurons['internal'] = INTERNAL_NEURONS
+
+		########################################################
+		# NOW WE ACCOUNT FOR THE BIAS NODE.  WE DO THIS BY:
+		#       1) Adding a key 'bias' to the self.neurons dictionary
+		#	2) numneurons += 1
+		#	3) adding a ROW of all 1.0's to end of the activity matrix
+		########################################################
+		self.neurons['bias'] = max(self.neurons['behavior'])+1
+		self.num_neurons += 1
+#		print self.acts.shape
+		# the bias node is always 1.0
+		bias_acts = ones( (1,self.timesteps_lived) )
+		self.acts = numpy.vstack( (self.acts, bias_acts) )
+
+#		print self.acts.shape
 
 
 	def binarize_neurons( self, neurons ):
@@ -117,15 +133,20 @@ class pw_brainfunction:
 		print "behavior:", self.neurons['behavior']
 
 		means, variances = self.acts.mean(axis=1), self.acts.var(axis=1)
+		num_entries = [ len(self.acts[i,:]) for i in range(self.acts.shape[0]) ]
 
 		print "neuron statistics:"
 		print ''
-		for i, (m, v) in enumerate(zip(means,variances)):
-			print "neuron=%s \t mean=%.4f \t var=%.4f" % ( i, m, v )
-
+		for i, (m, v, n) in enumerate(zip(means,variances,num_entries)):
 			
-	def write_to_Rfile(self, output_filename, labels=None ):
-		assert self.acts.shape[1] > self.acts.shape[0], "Likely error -- #cols (timesteps) was <= #rows (neurons)"
+			print "neuron=%s \t mean=%.4f \t var=%.4f \t samples=%s" % ( i, m, v, n )
+		
+		print "acts.shape=", self.acts.shape
+			
+	def write_to_Rfile(self, output_filename, labels=None ):		
+		assert self.num_neurons == self.acts.shape[0], "num_neurons didn't match the acts matrix!"
+		assert self.timesteps_lived == self.acts.shape[1], "timesteps_lived didn't match the acts matrix!"
+
 		temp = self.acts.T
 		numrows, numcols = temp.shape
 

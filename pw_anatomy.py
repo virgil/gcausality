@@ -53,8 +53,16 @@ class pw_anatomy:
 	def k_distance_from( self, start_nodes, max_distance, threshold, backtrace ):
 		'''ignore all connections less than threshold'''
 		assert max_distance >= 1, "max_distance must be >= 1"
+		
+		# if we passed a single int, make a list of it.
+		if type(start_nodes) is int:
+			start_nodes = [ start_nodes ]
+
 		assert 0 <= min(start_nodes) <= max(start_nodes) <= self.num_neurons, "start_nodes weren't within [0,num_neurons]"
 		
+		
+
+#		print self.cxnmatrix
 		
 		m = matrix( abs(self.cxnmatrix) > threshold, dtype=int )
 
@@ -66,16 +74,17 @@ class pw_anatomy:
 		connected = []
 
 		for i in range(max_distance):
-			#print "depth %s START:\t %s" % (i+1, v.T )
+#			print "depth %s START:\t %s" % (i+1, v.T )
 			v = m*v
 			indices = v.nonzero()[0].tolist()[0]
 
-			#print "depth %s END:  \t %s -- adding indices=%s" % (i+1, v.T, indices)
+#			print "depth %s END:  \t %s -- adding indices=%s" % (i+1, v.T, indices)
 
 			# append to our list of connected_nodes, uniqueify
 			connected = list(set( connected+indices ))
 
 		
+#		print "returning: ", connected 
 		return sorted(connected)
 		
 if __name__ == '__main__':
